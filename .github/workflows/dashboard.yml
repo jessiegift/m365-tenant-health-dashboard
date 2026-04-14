@@ -1,0 +1,32 @@
+name: M365 Tenant Health Dashboard
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+jobs:
+  build-dashboard:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup PowerShell
+        uses: actions/setup-powershell@v4
+
+      - name: Run dashboard script
+        run: |
+          pwsh ./scripts/Get-M365TenantHealth.ps1 `
+            -TenantId "${{ secrets.TENANT_ID }}" `
+            -ClientId "${{ secrets.CLIENT_ID }}" `
+            -ClientSecret "${{ secrets.CLIENT_SECRET }}"
+
+      - name: Commit updated dashboard
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add docs/index.html
+          git commit -m "Update dashboard" || echo "No changes"
+          git push
