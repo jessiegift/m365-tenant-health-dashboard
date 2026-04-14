@@ -5,7 +5,8 @@ for real-time Microsoft 365 tenant health data and publishes a live HTML dashboa
  [View the live dashboard](https://jessiegift.github.io/m365-tenant-health-dashboard/)
 
   ## Architeture 
-  <img width="1272" height="245" alt="Screenshot 2026-04-14 170029" src="https://github.com/user-attachments/assets/dc0f98f1-76cb-4e94-b87c-5b6d32cdf810" />
+  <img width="1938" height="1724" alt="mermaid-diagram-2026-04-14-203224" src="https://github.com/user-attachments/assets/8dc22148-5abd-478a-b439-d8118a4f868f" />
+
 
 
  ## What It Monitors
