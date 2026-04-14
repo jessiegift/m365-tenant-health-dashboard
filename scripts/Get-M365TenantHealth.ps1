@@ -11,9 +11,9 @@ $body = @{
     client_id     = $ClientId
     client_secret = $ClientSecret
 }
-
 $tokenResponse = Invoke-RestMethod -Method Post -Uri "https://login.microsoftonline.com/$TenantId/oauth2/v2.0/token" -Body $body
 $accessToken   = $tokenResponse.access_token
+
 
 $headers = @{
     Authorization = "Bearer $accessToken"
@@ -76,7 +76,7 @@ $licenseTable = $licenses.value |
 
 $inactiveTable = $inactiveUsers |
     Sort-Object LastSignIn |
-    ConvertTo-Hhtml -Fragment -PreContent "<h2>Inactive Users (30+ days)</h2>"
+    ConvertTo-Html -Fragment -PreContent "<h2>Inactive Users (30+ days)</h2>"
 
 $htmlFooter = @"
 </body>
