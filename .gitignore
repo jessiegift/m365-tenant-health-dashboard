@@ -1,0 +1,16 @@
+# PowerShell modules
+modules/
+
+# Secrets — never commit these
+.env
+*.pfx
+*.key
+credentials.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
