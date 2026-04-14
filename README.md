@@ -29,7 +29,8 @@ This project uses an **Azure AD App Registration** with **application permission
 - <img width="1636" height="708" alt="Screenshot 2026-04-14 122740" src="https://github.com/user-attachments/assets/f09aa8db-acbb-4ac6-98e5-8c632db2c579" />
 
 - Granted the required Graph API permissions
-- <img width="1916" height="822" alt="Screenshot 2026-04-14 123922" src="https://github.com/user-attachments/assets/c30f5940-0a6d-4660-a787-69843e76c828" />
+- <img width="824" height="416" alt="image" src="https://github.com/user-attachments/assets/33f9c7c6-97ec-4df3-83e9-f58efd647431" />
+
 - Created a client secret and copied the Value (not the Secret ID)
 - <img width="1629" height="751" alt="image" src="https://github.com/user-attachments/assets/5d2904ca-177a-4987-aa4a-3c8ea37a1e4e" />
 
