@@ -13,9 +13,6 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Setup PowerShell
-        uses: PowerShell/PowerShell@v1
-
       - name: Run dashboard script
         run: |
           pwsh ./scripts/Get-M365TenantHealth.ps1 `
