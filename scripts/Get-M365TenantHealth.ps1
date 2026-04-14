@@ -22,7 +22,7 @@ $headers = @{
 # 2. Call Graph endpoints
 
 # Service health
-$serviceHealth = Invoke-RestMethod -Headers $headers -Uri "https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/health" -Method Get
+$serviceHealth = Invoke-RestMethod -Headers $headers -Uri "https://graph.microsoft.com/v1.0/admin/serviceAnnouncement/healthOverviews" -Method Get
 
 # License usage
 $licenses = Invoke-RestMethod -Headers $headers -Uri "https://graph.microsoft.com/v1.0/subscribedSkus" -Method Get
