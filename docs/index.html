@@ -1,72 +1,351 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>M365 Tenant Health Dashboard</title>
-    <style>
-        body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #fafafa; color: #333; }
-        h1 { color: #0f4c81; }
-        h2 { color: #0f4c81; margin-top: 30px; }
-        .summary-cards { display: flex; gap: 20px; margin-bottom: 30px; flex-wrap: wrap; }
-        .card { background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); min-width: 200px; }
-        .card .number { font-size: 42px; font-weight: bold; }
-        .card .label { font-size: 14px; color: #666; margin-top: 5px; }
-        table { border-collapse: collapse; width: 100%; margin-bottom: 30px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        th, td { border: 1px solid #eee; padding: 10px 14px; font-size: 13px; }
-        th { background-color: #0f4c81; color: white; text-align: left; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        .updated { color: #888; font-size: 13px; }
-    </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>M365 Tenant Health</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0d1117;
+    --surface:  #161b22;
+    --surface2: #1c2230;
+    --border:   #21262d;
+    --border2:  #30363d;
+    --text:     #e6edf3;
+    --muted:    #7d8590;
+    --accent:   #2f81f7;
+    --ok:       #10b981;
+    --warn:     #f59e0b;
+    --crit:     #ef4444;
+    --radius:   12px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ── Layout ── */
+  .shell { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 28px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .sidebar-logo {
+    padding: 0 20px 28px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 16px;
+  }
+  .sidebar-logo .logo-mark {
+    width: 32px; height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 600; color: white;
+    margin-bottom: 10px;
+  }
+  .sidebar-logo .tenant-name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .sidebar-logo .tenant-sub  { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .nav-label { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; padding: 0 20px 6px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 20px; font-size: 13px; color: var(--muted);
+    cursor: pointer; transition: color 0.15s, background 0.15s;
+    border-left: 2px solid transparent;
+  }
+  .nav-item:hover { color: var(--text); background: var(--surface2); }
+  .nav-item.active { color: var(--accent); border-left-color: var(--accent); background: rgba(47,129,247,0.08); }
+  .nav-icon { font-size: 15px; }
+
+  .sidebar-footer { margin-top: auto; padding: 16px 20px 0; border-top: 1px solid var(--border); }
+  .updated-label { font-size: 10px; color: var(--muted); line-height: 1.5; }
+  .updated-time  { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  /* ── Main content ── */
+  .main { flex: 1; padding: 32px 36px; overflow-x: hidden; }
+
+  .page-header { margin-bottom: 32px; }
+  .page-title { font-size: 22px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  /* ── Stat cards ── */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 36px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .stat-card:hover { border-color: var(--border2); }
+  .stat-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: var(--card-accent, var(--accent));
+  }
+  .stat-label { font-size: 11px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+  .stat-value { font-size: 34px; font-weight: 600; color: var(--card-color, var(--text)); font-variant-numeric: tabular-nums; letter-spacing: -1px; }
+  .stat-sub { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+  /* ── Section ── */
+  .section { margin-bottom: 36px; }
+  .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .section-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .section-count { font-size: 12px; color: var(--muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
+
+  /* ── Table ── */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--surface2);
+    font-size: 11px; font-weight: 600; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.06em;
+    padding: 10px 16px; text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.1s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 11px 16px; }
+
+  .svc-name { font-size: 13px; color: var(--text); font-weight: 400; }
+  .num-cell { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted); text-align: right; }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 500; padding: 3px 10px;
+    border-radius: 20px; letter-spacing: 0.02em;
+  }
+  .badge-ok      { background: rgba(16,185,129,0.12); color: #34d399; border: 1px solid rgba(16,185,129,0.25); }
+  .badge-warn    { background: rgba(245,158,11,0.12); color: #fbbf24; border: 1px solid rgba(245,158,11,0.25); }
+  .badge-crit    { background: rgba(239,68,68,0.12);  color: #f87171; border: 1px solid rgba(239,68,68,0.25); }
+  .badge-unknown { background: rgba(125,133,144,0.12);color: #94a3b8; border: 1px solid rgba(125,133,144,0.25); }
+
+  .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+  .dot-ok      { background: #10b981; box-shadow: 0 0 6px #10b981; }
+  .dot-warn    { background: #f59e0b; box-shadow: 0 0 6px #f59e0b; }
+  .dot-crit    { background: #ef4444; box-shadow: 0 0 6px #ef4444; animation: pulse 1.5s infinite; }
+  .dot-unknown { background: #94a3b8; }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 0 4px #ef4444; }
+    50%       { box-shadow: 0 0 10px #ef4444; }
+  }
+
+  /* ── Progress bars ── */
+  .bar-wrap { display: inline-block; width: 80px; height: 4px; background: var(--border2); border-radius: 2px; vertical-align: middle; margin-right: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+  .bar-pct  { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  /* ── User cells ── */
+  .user-cell { display: flex; align-items: center; gap: 10px; }
+  .avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(47,129,247,0.15); border: 1px solid rgba(47,129,247,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: var(--accent);
+    flex-shrink: 0; text-transform: uppercase;
+  }
+  .user-name { font-size: 13px; color: var(--text); }
+  .user-upn  { font-size: 11px; color: var(--muted); font-family: 'DM Mono', monospace; }
+  .last-seen { color: var(--warn) !important; }
+</style>
 </head>
 <body>
-<h1>Microsoft 365 Tenant Health Dashboard</h1>
-<p class="updated">Last updated: 2026-04-14 19:05:44 UTC</p>
+<div class="shell">
 
-<div class="summary-cards">
-    <div class="card">
-        <div class="number" style="color: #c62828;">17.2%</div>
-        <div class="label">MFA Adoption (5 / 29 users)</div>
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">M</div>
+      <div class="tenant-name">Tenant Health</div>
+      <div class="tenant-sub">Microsoft 365</div>
     </div>
-    <div class="card">
-        <div class="number" style="color: #c62828;">19</div>
-        <div class="label">Inactive Users (30+ days)</div>
+    <div class="nav-label">Overview</div>
+    <div class="nav-item active"><span class="nav-icon">&#9681;</span> Dashboard</div>
+    <div class="nav-item"><span class="nav-icon">&#9432;</span> Service Health</div>
+    <div class="nav-item"><span class="nav-icon">&#128100;</span> Users</div>
+    <div class="nav-item"><span class="nav-icon">&#128273;</span> Licences</div>
+    <div class="nav-item"><span class="nav-icon">&#128737;</span> Security</div>
+    <div class="sidebar-footer">
+      <div class="updated-label">Last refreshed</div>
+      <div class="updated-time">15 Apr 2026, 02:00 UTC</div>
     </div>
-    <div class="card">
-        <div class="number" style="color: #0f4c81;">2</div>
-        <div class="label">License SKUs</div>
+  </nav>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="page-header">
+      <div class="page-title">Tenant Overview</div>
+      <div class="page-sub">Real-time health data from Microsoft Graph API</div>
     </div>
-</div><h2>Service Health</h2>
-<table>
-<tr><th>Service</th><th>Status</th></tr>
-<tr><td>Exchange Online</td><td> serviceDegradation</td></tr>
-<tr><td>Microsoft Entra</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft 365 suite</td><td> serviceDegradation</td></tr>
-<tr><td>SharePoint Online</td><td>serviceDegradation</td></tr>
-<tr><td>Dynamics 365 Apps</td><td>serviceOperational</td></tr>
-<tr><td>Basic Mobility and Security</td><td>serviceOperational</td></tr>
-<tr><td>Planner</td><td> serviceOperational</td></tr>
-<tr><td>Sway</td><td>serviceOperational</td></tr>
-<tr><td>Power BI</td><td>serviceDegradation</td></tr>
-<tr><td>Microsoft Intune</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft OneDrive</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Teams</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Bookings</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft 365 for the web</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft 365 apps</td><td> serviceOperational</td></tr>
-<tr><td>Power Apps</td><td> serviceOperational</td></tr>
-<tr><td>Power Apps in Microsoft 365</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Power Automate</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Power Automate in Microsoft 365</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Forms</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Defender XDR</td><td> serviceOperational</td></tr>
-<tr><td>Project for the web</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Stream</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Viva</td><td>serviceDegradation</td></tr>
-<tr><td>Microsoft Purview</td><td> serviceOperational</td></tr>
-<tr><td>Microsoft Clipchamp </td><td> serviceOperational</td></tr>
-<tr><td>Microsoft 365 Copilot Chat</td><td> serviceDegradation</td></tr>
-</table><h2>License Usage</h2>
-<table>
-<tr><th>SKU</th><th>Consumed</th><th>Total</th></tr>
-<tr><td>FLOW_FREE</td><td>2</td><td>10000</td></tr>
-<tr><td>DEVELOPERPACK_E5</td><td>24</td><td>25</td></tr>
-</table><h2>Inactive Users (30+ days)</h2> <table> <colgroup><col/><col/><col/></colgroup> <tr><th>DisplayName</th><th>UserPrincipalName</th><th>LastSignIn</th></tr> <tr><td>Pradeep Gupta</td><td>PradeepG@xt6b0.onmicrosoft.com</td><td>2024-03-18</td></tr> <tr><td>Grady Archie</td><td>GradyA@xt6b0.onmicrosoft.com</td><td>2024-03-18</td></tr> <tr><td>Henrietta Mueller</td><td>HenriettaM@xt6b0.onmicrosoft.com</td><td>2024-03-18</td></tr> <tr><td>Patti Fernandez</td><td>PattiF@xt6b0.onmicrosoft.com</td><td>2024-03-18</td></tr> <tr><td>Johanna Lorenz</td><td>JohannaL@xt6b0.onmicrosoft.com</td><td>2024-03-18</td></tr> <tr><td>Joni Sherman</td><td>JoniS@xt6b0.onmicrosoft.com</td><td>2024-03-18</td></tr> <tr><td>Miriam Graham</td><td>MiriamG@xt6b0.onmicrosoft.com</td><td>2024-03-18</td></tr> <tr><td>Nestor Wilke</td><td>NestorW@xt6b0.onmicrosoft.com</td><td>2024-03-18</td></tr> <tr><td>onyinye Eze</td><td>Oeze@xt6b0.onmicrosoft.com</td><td>2024-06-15</td></tr> <tr><td>Onyinye Anueyiagu</td><td>onyinye@xt6b0.onmicrosoft.com</td><td>2024-07-25</td></tr> <tr><td>Adele Vance</td><td>AdeleV@xt6b0.onmicrosoft.com</td><td>2024-08-20</td></tr> <tr><td>Alex Wilber</td><td>AlexW@xt6b0.onmicrosoft.com</td><td>2024-08-25</td></tr> <tr><td>Cedric Terrasson</td><td>Cedric@xt6b0.onmicrosoft.com</td><td>2024-09-16</td></tr> <tr><td>Lidia Holloway</td><td>LidiaH@xt6b0.onmicrosoft.com</td><td>2024-09-24</td></tr> <tr><td>Diego Siciliani</td><td>ekpereamaka@glimmertechhive.com</td><td>2025-05-04</td></tr> <tr><td>Chander Sangra</td><td>Sangra@xt6b0.onmicrosoft.com</td><td>2026-01-20</td></tr> <tr><td>Sarah Anueyiagu</td><td>SarahAdmin@xt6b0.onmicrosoft.com</td><td>2026-01-20</td></tr> <tr><td>Yvonne Etiaka</td><td>yvonnee@xt6b0.onmicrosoft.com</td><td>2026-03-14</td></tr> <tr><td>info</td><td>info@glimmertechhive.com</td><td>2026-03-15</td></tr> </table></body>
+
+    <!-- Stat cards -->
+    <div class="cards">
+      <div class="stat-card" style="--card-accent:#10b981; --card-color:#10b981;">
+        <div class="stat-label">Services healthy</div>
+        <div class="stat-value">22</div>
+        <div class="stat-sub">of 27 monitored</div>
+      </div>
+      <div class="stat-card" style="--card-accent:#ef4444; --card-color:#ef4444;">
+        <div class="stat-label">Degraded / issues</div>
+        <div class="stat-value">5</div>
+        <div class="stat-sub">requires attention</div>
+      </div>
+      <div class="stat-card" style="--card-accent:#ef4444; --card-color:#ef4444;">
+        <div class="stat-label">MFA adoption</div>
+        <div class="stat-value">17.2%</div>
+        <div class="stat-sub">5 of 29 users</div>
+      </div>
+      <div class="stat-card" style="--card-accent:#f59e0b; --card-color:#f59e0b;">
+        <div class="stat-label">Inactive users</div>
+        <div class="stat-value">19</div>
+        <div class="stat-sub">no sign-in 30+ days</div>
+      </div>
+      <div class="stat-card" style="--card-accent:#2f81f7; --card-color:#2f81f7;">
+        <div class="stat-label">Total users</div>
+        <div class="stat-value">29</div>
+        <div class="stat-sub">in directory</div>
+      </div>
+      <div class="stat-card" style="--card-accent:#a78bfa; --card-color:#a78bfa;">
+        <div class="stat-label">Licence SKUs</div>
+        <div class="stat-value">2</div>
+        <div class="stat-sub">active subscriptions</div>
+      </div>
+    </div>
+
+    <!-- Service health -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Service health</span>
+        <span class="section-count">27 services</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Service</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><span class='svc-name'>Exchange Online</span></td><td><span class='badge badge-warn'><span class='dot dot-warn'></span>Degraded</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft 365 suite</span></td><td><span class='badge badge-warn'><span class='dot dot-warn'></span>Degraded</span></td></tr>
+<tr><td><span class='svc-name'>SharePoint Online</span></td><td><span class='badge badge-warn'><span class='dot dot-warn'></span>Degraded</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Viva</span></td><td><span class='badge badge-warn'><span class='dot dot-warn'></span>Degraded</span></td></tr>
+<tr><td><span class='svc-name'>Power BI</span></td><td><span class='badge badge-warn'><span class='dot dot-warn'></span>Degraded</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Purview</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Stream</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Project for the web</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Defender XDR</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Forms</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Power Automate in Microsoft 365</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Power Automate</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Power Apps in Microsoft 365</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Power Apps</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft 365 for the web</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Clipchamp </span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Bookings</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Teams</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft OneDrive</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Intune</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Sway</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Planner</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Basic Mobility and Security</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Dynamics 365 Apps</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft Entra</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft 365 apps</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+<tr><td><span class='svc-name'>Microsoft 365 Copilot Chat</span></td><td><span class='badge badge-ok'><span class='dot dot-ok'></span>Operational</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Licence usage -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Licence usage</span>
+        <span class="section-count">2 SKUs</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>SKU</th><th style="text-align:right">Consumed</th><th style="text-align:right">Total</th><th>Utilisation</th></tr></thead>
+          <tbody>
+            <tr>
+  <td><span class='svc-name'>FLOW FREE</span></td>
+  <td class='num-cell'>2</td>
+  <td class='num-cell'>10000</td>
+  <td>
+    <div class='bar-wrap'><div class='bar-fill' style='width:0%;background:#10b981'></div></div>
+    <span class='bar-pct'>0%</span>
+  </td>
+</tr>
+<tr>
+  <td><span class='svc-name'>DEVELOPERPACK E5</span></td>
+  <td class='num-cell'>24</td>
+  <td class='num-cell'>25</td>
+  <td>
+    <div class='bar-wrap'><div class='bar-fill' style='width:96%;background:#ef4444'></div></div>
+    <span class='bar-pct'>96%</span>
+  </td>
+</tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Inactive users -->
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">Inactive users <span style="color:#f59e0b">&#9888;</span></span>
+        <span class="section-count">19 users</span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>User</th><th style="text-align:right">Last sign-in</th></tr></thead>
+          <tbody>
+            <tr><td><div class='user-cell'><div class='avatar'>PG</div><div><div class='user-name'>Pradeep Gupta</div><div class='user-upn'>PradeepG@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-03-18</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>GA</div><div><div class='user-name'>Grady Archie</div><div class='user-upn'>GradyA@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-03-18</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>HM</div><div><div class='user-name'>Henrietta Mueller</div><div class='user-upn'>HenriettaM@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-03-18</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>PF</div><div><div class='user-name'>Patti Fernandez</div><div class='user-upn'>PattiF@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-03-18</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>JL</div><div><div class='user-name'>Johanna Lorenz</div><div class='user-upn'>JohannaL@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-03-18</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>JS</div><div><div class='user-name'>Joni Sherman</div><div class='user-upn'>JoniS@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-03-18</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>MG</div><div><div class='user-name'>Miriam Graham</div><div class='user-upn'>MiriamG@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-03-18</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>NW</div><div><div class='user-name'>Nestor Wilke</div><div class='user-upn'>NestorW@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-03-18</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>oE</div><div><div class='user-name'>onyinye Eze</div><div class='user-upn'>Oeze@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-06-15</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>OA</div><div><div class='user-name'>Onyinye Anueyiagu</div><div class='user-upn'>onyinye@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-07-25</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>AV</div><div><div class='user-name'>Adele Vance</div><div class='user-upn'>AdeleV@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-08-20</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>AW</div><div><div class='user-name'>Alex Wilber</div><div class='user-upn'>AlexW@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-08-25</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>CT</div><div><div class='user-name'>Cedric Terrasson</div><div class='user-upn'>Cedric@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-09-16</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>LH</div><div><div class='user-name'>Lidia Holloway</div><div class='user-upn'>LidiaH@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2024-09-24</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>DS</div><div><div class='user-name'>Diego Siciliani</div><div class='user-upn'>ekpereamaka@glimmertechhive.com</div></div></div></td><td class='num-cell last-seen'>2025-05-04</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>CS</div><div><div class='user-name'>Chander Sangra</div><div class='user-upn'>Sangra@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2026-01-20</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>SA</div><div><div class='user-name'>Sarah Anueyiagu</div><div class='user-upn'>SarahAdmin@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2026-01-20</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>YE</div><div><div class='user-name'>Yvonne Etiaka</div><div class='user-upn'>yvonnee@xt6b0.onmicrosoft.com</div></div></div></td><td class='num-cell last-seen'>2026-03-14</td></tr>
+<tr><td><div class='user-cell'><div class='avatar'>i</div><div><div class='user-name'>info</div><div class='user-upn'>info@glimmertechhive.com</div></div></div></td><td class='num-cell last-seen'>2026-03-15</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+</div>
+</body>
 </html>
